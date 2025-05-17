@@ -33,6 +33,7 @@
                     variant="tonal"
                     size="small"
                     @click="dialogAddUser = true"
+                    color="primary"
                   >
                     Adicionar usuário
                   </v-btn>
@@ -50,188 +51,138 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>01/01/2023</td>
-                    <td>Teste Usuário 1</td>
-                    <td>12345678911</td>
-                    <td>teste1@gmail.com</td>
-                    <td>admin</td>
+                  <tr v-for="(item, index) in paginatedUsers" :key="index">
                     <td>
-                      <v-btn color="primary" size="small">Detalhar</v-btn>
-                      <v-btn color="primary" size="small" class="ml-2"
-                        >Editar</v-btn
-                      >
-                      <v-btn color="error" size="small" class="ml-2"
-                        >Excluir</v-btn
-                      >
+                      {{ new Date(item.created_at).toLocaleDateString() }}
                     </td>
-                  </tr>
-                  <tr>
-                    <td>02/01/2023</td>
-                    <td>Teste Usuário 2</td>
-                    <td>12345678912</td>
-                    <td>teste2@gmail.com</td>
-                    <td>user</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.cpf }}</td>
+                    <td>{{ item.email }}</td>
+                    <td>{{ item.profile?.name ?? "-" }}</td>
                     <td>
                       <v-btn color="primary" size="small">Detalhar</v-btn>
-                      <v-btn color="primary" size="small" class="ml-2"
-                        >Editar</v-btn
+                      <v-btn
+                        color="primary"
+                        size="small"
+                        class="ml-2"
+                        @click="openEditUserDialog(item)"
                       >
-                      <v-btn color="error" size="small" class="ml-2"
-                        >Excluir</v-btn
+                        Editar
+                      </v-btn>
+                      <v-btn
+                        color="error"
+                        size="small"
+                        class="ml-2"
+                        @click="openDeleteUserDialog(item)"
                       >
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>03/01/2023</td>
-                    <td>Teste Usuário 3</td>
-                    <td>12345678913</td>
-                    <td>teste3@gmail.com</td>
-                    <td>admin</td>
-                    <td>
-                      <v-btn color="primary" size="small">Detalhar</v-btn>
-                      <v-btn color="primary" size="small" class="ml-2"
-                        >Editar</v-btn
-                      >
-                      <v-btn color="error" size="small" class="ml-2"
-                        >Excluir</v-btn
-                      >
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>04/01/2023</td>
-                    <td>Teste Usuário 4</td>
-                    <td>12345678914</td>
-                    <td>teste4@gmail.com</td>
-                    <td>user</td>
-                    <td>
-                      <v-btn color="primary" size="small">Detalhar</v-btn>
-                      <v-btn color="primary" size="small" class="ml-2"
-                        >Editar</v-btn
-                      >
-                      <v-btn color="error" size="small" class="ml-2"
-                        >Excluir</v-btn
-                      >
+                        Excluir
+                      </v-btn>
                     </td>
                   </tr>
                 </tbody>
               </v-table>
             </v-card>
+
+            <div class="text-center">
+              <v-pagination
+                v-model="page"
+                :length="paginationLength"
+                next-icon="mdi-menu-right"
+                prev-icon="mdi-menu-left"
+              ></v-pagination>
+            </div>
           </v-col>
         </v-row>
       </v-container>
 
-      <!-- Add User Modal -->
-      <v-dialog v-model="dialogAddUser" max-width="500px">
-        <v-card>
-          <v-card-title class="ml-2 mt-2">
-            <span class="headline">Adicionar Novo Usuário</span>
-          </v-card-title>
-
-          <v-card-text>
-            <v-form>
-              <v-text-field
-                label="Nome"
-                v-model="userName"
-                type="text"
-                required
-              />
-
-              <v-text-field
-                label="E-mail"
-                v-model="userEmail"
-                type="email"
-                required
-              />
-
-              <v-text-field
-                label="Digite seu CPF"
-                v-model="userCpf"
-                @input="formatCPF"
-                maxlength="14"
-                required
-              />
-
-              <v-autocomplete
-                v-model="userProfile"
-                label="Selecione o Perfil"
-                :items="['admin', 'user']"
-                density="compact"
-                required
-              >
-                <template v-slot:prepend-inner>
-                  <div class="v-input__control" style="height: 56px"></div>
-                </template>
-              </v-autocomplete>
-
-              <v-text-field
-                label="Logradouro"
-                v-model="userStreet"
-                type="text"
-              />
-
-              <v-text-field
-                label="CEP"
-                v-model="userCep"
-                maxlength="8"
-                @input="formatCEP"
-                type="text"
-              />
-            </v-form>
-          </v-card-text>
-
-          <v-card-actions>
-            <v-btn text @click="dialogAddUser = false">Cancelar</v-btn>
-            <v-btn color="primary" @click="addUser">Adicionar</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <AddUserDialog v-model="dialogAddUser" :profiles="userProfiles" />
+      <EditUserDialog
+        v-model="dialogEditUser"
+        :profiles="userProfiles"
+        :user-to-edit="selectedUser"
+        @update-user="handleUpdateUser"
+      />
+      <DeleteUserDialog v-model="dialogDeleteUser" :user="selectedUser" />
     </v-main>
   </v-app>
 </template>
 
-<script setup>
-import { ref } from "vue";
-
-const drawer = ref(null);
-</script>
-
 <script>
+import axios from "axios";
+import AddUserDialog from "./components/AddUserDialog.vue";
+import EditUserDialog from "./components/EditUserDialog.vue";
+import DeleteUserDialog from "./components/DeleteUserDialog.vue";
+
 export default {
+  components: {
+    AddUserDialog,
+    EditUserDialog,
+    DeleteUserDialog,
+  },
   data() {
     return {
+      drawer: false,
       dialogAddUser: false,
-      userCpf: "",
-      userName: "",
-      userEmail: "",
-      userProfile: "",
-      userStreet: "",
-      userCep: "",
+      dialogEditUser: false,
+      dialogDeleteUser: false,
+      page: 1,
+      formValid: false,
+      selectedUser: null,
+      paginationData: {
+        data: [],
+        current_page: 1,
+        last_page: 1,
+        per_page: 5,
+      },
+      userProfiles: [
+        { text: "ADM", value: "admin" },
+        { text: "USER", value: "user" },
+      ],
     };
   },
-  methods: {
-    formatCPF(event) {
-      let cpf = this.userCpf.replace(/\D/g, ""); // Remove caracteres não numéricos
-
-      // Verifica se o CPF possui 11 ou 14 dígitos
-      if (cpf.length <= 11) {
-        cpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-      }
-
-      // Atualiza o v-model com o CPF formatado
-      //this.userCpf = cpf;
+  computed: {
+    paginatedUsers() {
+      return this.paginationData.data;
     },
-    formatCEP(event) {
-      let cep = event.target.value.replace(/\D/g, ""); // Remove caracteres não numéricos
-
-      // Verifica o comprimento do CEP
-      if (cep.length > 5) {
-        // Adiciona o hífen no lugar correto
-        cep = cep.slice(0, 5) + "-" + cep.slice(5, 8);
+    paginationLength() {
+      return this.paginationData.last_page;
+    },
+  },
+  watch: {
+    page() {
+      this.fetchUsers();
+    },
+  },
+  mounted() {
+    this.fetchUsers();
+  },
+  methods: {
+    fetchUsers() {
+      axios
+        .get(
+          `http://localhost:8000/api/user?page=${this.page}&per_page=${this.paginationData.per_page}`,
+        )
+        .then((response) => {
+          this.paginationData = response.data;
+          console.log(this.paginationData);
+        })
+        .catch(console.error);
+    },
+    openEditUserDialog(user) {
+      this.selectedUser = { ...user };
+      this.dialogEditUser = true;
+    },
+    openDeleteUserDialog(user) {
+      this.selectedUser = { ...user };
+      this.dialogDeleteUser = true;
+    },
+    handleUpdateUser(updatedUser) {
+      const index = this.paginationData.data.findIndex(
+        (user) => user.id === updatedUser.id,
+      );
+      if (index !== -1) {
+        this.paginationData.data.splice(index, 1, updatedUser);
       }
-
-      // Atualiza o v-model com o CEP formatado
-      //this.userCep = cep;
     },
   },
 };
