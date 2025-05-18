@@ -6,18 +6,44 @@
 
 // Composables
 import { createRouter, createWebHistory } from "vue-router";
-import HelloWorld from "@/components/HelloWorld.vue";
+import Home from "@/pages/Home.vue";
+import login from "@/components/autenticate/login.vue";
+//import DetailUser from "@/components/DetailUser.vue";
 
 const routes = [
   {
     path: "/",
-    component: HelloWorld,
+    component: Home,
+    meta: { requiresAuth: true },
   },
+  {
+    path: "/login",
+    component: login,
+  },
+  /*{
+    path: "/detalhes",
+    component: DetailUser,
+  },*/
 ];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("token");
+
+  if (to.meta.requiresAuth && !token) {
+    // Se a rota precisa de autenticação e o usuário não tem token, redireciona
+    next("/login");
+  } else if (to.path === "/login" && token) {
+    // Se está logado e tenta ir pro login, manda pra home
+    next("/dashboard");
+  } else {
+    // Tudo certo, segue
+    next();
+  }
 });
 
 // Workaround for https://github.com/vitejs/vite/issues/11804
