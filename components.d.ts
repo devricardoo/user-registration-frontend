@@ -11,8 +11,12 @@ declare module 'vue' {
     AddUserDialog: typeof import('./src/components/AddUserDialog.vue')['default']
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
     DeleteUserDialog: typeof import('./src/components/DeleteUserDialog.vue')['default']
+    DetailUser: typeof import('./src/components/DetailUser.vue')['default']
+    DetailUserModal: typeof import('./src/components/DetailUserModal.vue')['default']
     EditUserDialog: typeof import('./src/components/EditUserDialog.vue')['default']
+    FilterUsers: typeof import('./src/components/FilterUsers.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
+    Login: typeof import('./src/components/autenticate/login.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
