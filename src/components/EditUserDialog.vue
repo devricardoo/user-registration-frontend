@@ -2,7 +2,8 @@
   <v-dialog
     :model-value="modelValue"
     @update:modelValue="$emit('update:modelValue', $event)"
-    max-width="500px"
+    max-width="560px"
+    height="400"
   >
     <v-card>
       <v-card-title class="ml-2 mt-2">
@@ -12,7 +13,7 @@
       <v-card-text>
         <v-form ref="form">
           <v-row dense>
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="Nome"
                 v-model="user.name"
@@ -21,7 +22,30 @@
               />
             </v-col>
 
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
+              <v-text-field
+                label="Digite seu CPF"
+                v-model="user.cpf"
+                @input="formatCPF"
+                maxlength="14"
+                required
+                :rules="[(v) => !!v || 'CPF é obrigatório']"
+              />
+            </v-col>
+
+            <v-col :cols="12" md="4">
+              <v-autocomplete
+                v-model="user.profile"
+                :items="profiles"
+                item-value="value"
+                item-title="text"
+                label="Selecione o Perfil"
+                required
+                :rules="[(v) => !!v || 'Selecione um perfil']"
+              />
+            </v-col>
+
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="E-mail"
                 v-model="user.email"
@@ -34,30 +58,7 @@
               />
             </v-col>
 
-            <v-col :cols="12" :md="6">
-              <v-text-field
-                label="Digite seu CPF"
-                v-model="user.cpf"
-                @input="formatCPF"
-                maxlength="14"
-                required
-                :rules="[(v) => !!v || 'CPF é obrigatório']"
-              />
-            </v-col>
-
-            <v-col :cols="12" md="6">
-              <v-autocomplete
-                v-model="user.profile"
-                :items="profiles"
-                item-value="value"
-                item-title="text"
-                label="Selecione o Perfil"
-                required
-                :rules="[(v) => !!v || 'Selecione um perfil']"
-              />
-            </v-col>
-
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="Senha"
                 v-model="user.password"
@@ -77,7 +78,7 @@
               </v-text-field>
             </v-col>
 
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="Confirme a Senha"
                 v-model="user.passwordConfirmation"
@@ -96,7 +97,7 @@
               </v-text-field>
             </v-col>
 
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="Logradouro"
                 v-model="user.street"
@@ -104,7 +105,7 @@
               />
             </v-col>
 
-            <v-col :cols="12" :md="6">
+            <v-col :cols="12" md="4">
               <v-text-field
                 label="CEP"
                 v-model="user.cep"
