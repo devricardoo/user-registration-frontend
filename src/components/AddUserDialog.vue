@@ -43,7 +43,6 @@
                 item-value="value"
                 item-title="text"
                 label="Selecione o Perfil"
-                density="compact"
                 required
                 :rules="[(v) => !!v || 'Selecione um perfil']"
               >
@@ -216,10 +215,6 @@ export default {
         confirmPassword: (v) =>
           v === this.user.password || "As senhas não coincidem",
       },
-      formValid: false,
-      loading: false,
-      passwordVisible: false,
-      passwordVisibleCF: false,
       user: {
         name: "",
         email: "",
@@ -239,6 +234,10 @@ export default {
           complement: "",
         },
       ],
+      formValid: false,
+      loading: false,
+      passwordVisible: false,
+      passwordVisibleCF: false,
     };
   },
   methods: {
