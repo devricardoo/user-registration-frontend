@@ -1,28 +1,31 @@
 <template>
   <v-dialog
     :model-value="modelValue"
-    @update:modelValue="$emit('update:modelValue', $event)"
+    @update:modelValue="handleDialogUpdate"
     max-width="560px"
-    height="400"
   >
-    <v-card>
-      <v-card-title class="ml-2 mt-2">
-        <span class="headline">Editar Usuário</span>
-      </v-card-title>
+    <v-card flat class="pa-6">
+      <h2 class="text-center text-primary text-h5 font-weight-bold mb-6">
+        Edição de Usuário
+      </h2>
 
-      <v-card-text>
-        <v-form ref="form">
+      <v-form ref="form" v-model="formValid" lazy-validation>
+        <v-card class="pa-4 mb-6" elevation="0" color="#eaf2ff">
+          <h3 class="text-subtitle-1 font-weight-bold mb-4">
+            Informações do Usuário
+          </h3>
           <v-row dense>
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-text-field
                 label="Nome"
                 v-model="user.name"
+                type="text"
                 required
-                :rules="[(v) => !!v || 'Informe um nome']"
+                :rules="[rules.required]"
               />
             </v-col>
 
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-text-field
                 label="Digite seu CPF"
                 v-model="user.cpf"
@@ -33,9 +36,9 @@
               />
             </v-col>
 
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-autocomplete
-                v-model="user.profile"
+                v-model="user.profile_id"
                 :items="profiles"
                 item-value="value"
                 item-title="text"
@@ -45,89 +48,131 @@
               />
             </v-col>
 
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-text-field
                 label="E-mail"
                 v-model="user.email"
                 type="email"
                 required
-                :rules="[
-                  (v) => !!v || 'E-mail é obrigatório',
-                  (v) => /.+@.+\..+/.test(v) || 'E-mail inválido',
-                ]"
+                :rules="[rules.email]"
               />
             </v-col>
 
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-text-field
                 label="Senha"
                 v-model="user.password"
                 :type="passwordVisible ? 'text' : 'password'"
-                required
-                :rules="[
-                  (v) => !!v || 'Senha é obrigatória',
-                  (v) =>
-                    v.length >= 6 || 'A senha deve ter pelo menos 6 caracteres',
-                ]"
+                :rules="[rules.passwordMin]"
               >
                 <template v-slot:append-inner>
-                  <v-icon @click="passwordVisible = !passwordVisible">{{
-                    passwordVisible ? "mdi-eye-off" : "mdi-eye"
-                  }}</v-icon>
+                  <v-icon @click="passwordVisible = !passwordVisible">
+                    {{ passwordVisible ? "mdi-eye-off" : "mdi-eye" }}
+                  </v-icon>
                 </template>
               </v-text-field>
             </v-col>
 
-            <v-col :cols="12" md="4">
+            <v-col cols="12" md="4">
               <v-text-field
                 label="Confirme a Senha"
-                v-model="user.passwordConfirmation"
-                :type="passwordVisible ? 'text' : 'password'"
-                required
-                :rules="[
-                  (v) => !!v || 'Confirmação de senha é obrigatória',
-                  (v) => v === user.password || 'As senhas não coincidem',
-                ]"
+                v-model="user.password_confirmation"
+                :type="passwordVisibleCF ? 'text' : 'password'"
+                :rules="[rules.confirmPassword]"
               >
                 <template v-slot:append-inner>
-                  <v-icon @click="passwordVisibleCF = !passwordVisibleCF">{{
-                    passwordVisibleCF ? "mdi-eye-off" : "mdi-eye"
-                  }}</v-icon>
+                  <v-icon @click="passwordVisibleCF = !passwordVisibleCF">
+                    {{ passwordVisibleCF ? "mdi-eye-off" : "mdi-eye" }}
+                  </v-icon>
                 </template>
               </v-text-field>
             </v-col>
-
-            <v-col :cols="12" md="4">
-              <v-text-field
-                label="Logradouro"
-                v-model="user.street"
-                type="text"
-              />
-            </v-col>
-
-            <v-col :cols="12" md="4">
-              <v-text-field
-                label="CEP"
-                v-model="user.cep"
-                maxlength="9"
-                @input="formatCEP"
-                type="text"
-                :rules="[(v) => !!v || 'CEP é obrigatório']"
-              />
-            </v-col>
           </v-row>
-        </v-form>
-      </v-card-text>
+        </v-card>
 
-      <v-card-actions>
-        <v-btn text @click="$emit('update:modelValue', false)">Cancelar</v-btn>
-        <v-btn color="primary" @click="submitUser"> Atualizar </v-btn>
-      </v-card-actions>
+        <!-- Addresses -->
+        <div>
+          <h3 class="text-subtitle-1 font-weight-bold text-primary mb-2">
+            Endereços
+          </h3>
+
+          <v-btn class="add-address-btn mb-4" @click="addAddress">
+            + Adicionar Endereço
+          </v-btn>
+
+          <div
+            class="mb-6"
+            v-for="(address, index) in addresses"
+            :key="`address-${index}`"
+          >
+            <v-card class="pa-4 mb-4" elevation="0">
+              <h4 class="text-body-1 font-weight-bold mb-4">
+                Endereço {{ index + 1 }}
+              </h4>
+              <v-row dense>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Rua *" v-model="address.public_place" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Número *" v-model="address.number" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    label="Bairro *"
+                    v-model="address.neighborhood"
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Cidade *" v-model="address.city" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Estado *" v-model="address.state" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    label="CEP *"
+                    v-model="address.cep"
+                    @input="formatCEP(index)"
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    label="Complemento"
+                    v-model="address.complement"
+                  />
+                </v-col>
+              </v-row>
+            </v-card>
+          </div>
+        </div>
+
+        <div class="d-flex justify-end mt-4">
+          <v-btn
+            color="error"
+            small
+            class="mr-2"
+            @click="
+              () => {
+                resetForm();
+                $emit('update:modelValue', false);
+              }
+            "
+          >
+            Cancelar
+          </v-btn>
+          <v-btn color="primary" small :loading="loading" @click="editUser">
+            Salvar
+          </v-btn>
+        </div>
+      </v-form>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
+import axios from "axios";
+import { id } from "vuetify/locale";
+
 export default {
   props: {
     modelValue: Boolean,
@@ -136,72 +181,253 @@ export default {
   },
   data() {
     return {
+      formValid: true,
+      loading: false,
+      passwordVisible: false,
+      passwordVisibleCF: false,
       user: {
-        id: "",
+        id: null,
         name: "",
         email: "",
         cpf: "",
-        profile: "",
-        street: "",
-        cep: "",
+        profile_id: "",
         password: "",
-        passwordConfirmation: "",
+        password_confirmation: "",
       },
-      passwordVisible: false,
-      passwordVisibleCF: false,
+      addresses: [
+        {
+          public_place: "",
+          number: "",
+          neighborhood: "",
+          city: "",
+          state: "",
+          cep: "",
+          complement: "",
+        },
+      ],
+      rules: {
+        required: (v) => !!v || "Campo obrigatório",
+        email: (v) => /.+@.+\..+/.test(v) || "E-mail inválido",
+        passwordMin: (v) =>
+          !v || v.length >= 6 || "A senha deve ter pelo menos 6 caracteres",
+        confirmPassword: (v) =>
+          !this.user.password ||
+          v === this.user.password ||
+          "As senhas não coincidem",
+      },
     };
   },
   watch: {
     userToEdit: {
-      immediate: true,
-      handler(newUser) {
-        if (newUser) {
-          this.user.id = newUser.id;
-          this.user.name = newUser.name;
-          this.user.email = newUser.email;
-          this.user.cpf = newUser.cpf;
-          this.user.profile = newUser.profile?.name || "";
-          this.user.street = newUser.street;
-          this.user.cep = newUser.cep;
+      handler(newVal) {
+        if (this.modelValue && newVal) {
+          this.initializeFormData();
         }
       },
+      immediate: true,
     },
   },
   methods: {
+    handleUpdateUser(updatedUser) {
+      // Atualiza o usuário selecionado para refletir mudanças no perfil e outros dados
+      this.selectedUser = { ...updatedUser };
+
+      // Se você mantiver uma lista de usuários, atualize ela também para manter tudo sincronizado
+      const idx = this.users.findIndex((u) => u.id === updatedUser.id);
+      if (idx !== -1) {
+        this.users.splice(idx, 1, updatedUser);
+      }
+    },
+    confirmPasswordRule() {
+      return (v) => v === this.user.password || "As senhas não coincidem";
+    },
+    handleDialogUpdate(val) {
+      this.$emit("update:modelValue", val);
+    },
+    initializeFormData() {
+      if (this.userToEdit) {
+        this.user = {
+          id: this.userToEdit.id || null,
+          name: this.userToEdit.name || "",
+          email: this.userToEdit.email || "",
+          cpf: this.userToEdit.cpf || "",
+          profile_id: this.userToEdit.profile_id || "",
+          password: "",
+          password_confirmation: "",
+        };
+
+        this.addresses =
+          this.userToEdit.addresses?.length > 0
+            ? this.userToEdit.addresses.map((addr) => ({
+                id: addr.id || null,
+                public_place: addr.public_place || "",
+                number: addr.number || "",
+                neighborhood: addr.neighborhood || "",
+                city: addr.city || "",
+                state: addr.state || "",
+                cep: this.formatLoadedCEP(addr.cep || ""),
+                complement: addr.complement || "",
+              }))
+            : [
+                {
+                  public_place: "",
+                  number: "",
+                  neighborhood: "",
+                  city: "",
+                  state: "",
+                  cep: "",
+                  complement: "",
+                },
+              ];
+      }
+    },
+    formatLoadedCEP(cep) {
+      const cleaned = cep.replace(/\D/g, "");
+      return cleaned.length > 5
+        ? cleaned.slice(0, 5) + "-" + cleaned.slice(5, 8)
+        : cleaned;
+    },
     formatCPF() {
-      let cpf = this.user.cpf.replace(/\D/g, "");
-      if (cpf.length <= 11) {
-        this.user.cpf = cpf.replace(
-          /(\d{3})(\d{3})(\d{3})(\d{2})/,
-          "$1.$2.$3-$4",
-        );
-      }
+      let v = this.user.cpf.replace(/\D/g, "");
+      v = v.replace(/(\d{3})(\d)/, "$1.$2");
+      v = v.replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+      v = v.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+      this.user.cpf = v;
     },
-    formatCEP() {
-      let cep = this.user.cep.replace(/\D/g, "");
-      if (cep.length > 5) {
-        this.user.cep = cep.slice(0, 5) + "-" + cep.slice(5, 8);
-      } else {
-        this.user.cep = cep;
-      }
+    formatCEP(index) {
+      let cep = this.addresses[index].cep.replace(/\D/g, "");
+      this.addresses[index].cep =
+        cep.length > 5 ? cep.slice(0, 5) + "-" + cep.slice(5, 8) : cep;
     },
-    submitUser() {
-      this.$emit("update:modelValue", false);
-      this.$emit("update-user", { ...this.user });
+    addAddress() {
+      this.addresses.push({
+        public_place: "",
+        number: "",
+        neighborhood: "",
+        city: "",
+        state: "",
+        cep: "",
+        complement: "",
+      });
     },
-    resetUser() {
+    resetForm() {
       this.user = {
-        id: "",
+        id: null,
         name: "",
         email: "",
         cpf: "",
-        profile: "",
-        street: "",
-        cep: "",
+        profile_id: "",
         password: "",
-        passwordConfirmation: "",
+        password_confirmation: "",
       };
+      this.addresses = [
+        {
+          public_place: "",
+          number: "",
+          neighborhood: "",
+          city: "",
+          state: "",
+          cep: "",
+          complement: "",
+        },
+      ];
+    },
+    editUser() {
+      if (this.$refs.form.validate()) {
+        this.loading = true;
+
+        const payload = {
+          ...this.user,
+          addresses: this.addresses.map((addr) => ({
+            ...addr,
+            id: addr.id,
+            cep: addr.cep.replace(/\D/g, ""),
+          })),
+        };
+
+        if (!payload.password) {
+          delete payload.password;
+          delete payload.password_confirmation;
+        }
+
+        axios
+          .patch(`http://localhost:8000/api/user/${this.user.id}`, payload, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          })
+          .then((response) => {
+            this.$emit("update-user", response.data);
+            console.log(response.data);
+            this.$emit("update:modelValue", false);
+            this.loading = false;
+            this.resetForm();
+          })
+          .catch((error) => {
+            this.loading = false;
+            // aqui você pode tratar os erros, por exemplo:
+            if (error.response && error.response.data) {
+              console.log("Erros de validação:", error.response.data);
+              alert("Erro ao salvar: " + JSON.stringify(error.response.data));
+            } else {
+              alert("Erro inesperado ao salvar usuário.");
+            }
+          });
+      }
     },
   },
 };
 </script>
+
+<style scoped>
+.custom-input .v-input__control {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  transition:
+    box-shadow 0.2s,
+    border 0.2s;
+  border: 1px solid #cbd5e0;
+}
+
+.custom-input input {
+  font-size: 16px;
+  padding: 10px;
+}
+
+.custom-input .v-input--is-focused .v-input__control {
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+  border-color: #2196f3;
+}
+
+.address-card {
+  background-color: #f8f9fb;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.add-address-btn {
+  background-color: #28a745;
+  color: #fff;
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: bold;
+}
+
+.cancel-btn {
+  background-color: #dc3545;
+  color: #fff;
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: bold;
+}
+
+.add-btn {
+  background-color: #28a745;
+  color: #fff;
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: bold;
+}
+</style>
