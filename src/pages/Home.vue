@@ -134,6 +134,7 @@
         :user-to-edit="selectedUser"
         @update-user="handleUpdateUser"
       />
+
       <DeleteUserDialog v-model="dialogDeleteUser" :user="selectedUser" />
       <DetailUserModal v-model="dialogDetailUser" />
       <FilterUsers v-model="dialogFilterUsers" />
