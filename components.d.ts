@@ -14,6 +14,7 @@ declare module 'vue' {
     DetailUser: typeof import('./src/components/DetailUser.vue')['default']
     DetailUserModal: typeof import('./src/components/DetailUserModal.vue')['default']
     EditUserDialog: typeof import('./src/components/EditUserDialog.vue')['default']
+    F: typeof import('./src/components/f.vue')['default']
     FilterUsers: typeof import('./src/components/FilterUsers.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     Login: typeof import('./src/components/autenticate/login.vue')['default']
