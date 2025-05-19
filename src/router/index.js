@@ -8,17 +8,19 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/pages/Home.vue";
 import login from "@/components/autenticate/login.vue";
+//import { meta } from "eslint-plugin-vue";
 //import DetailUser from "@/components/DetailUser.vue";
 
 const routes = [
   {
     path: "/",
     component: Home,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: "Home" },
   },
   {
     path: "/login",
     component: login,
+    meta: { title: "Login" },
   },
   /*{
     path: "/detalhes",
@@ -32,6 +34,8 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
+  const defaultTitle = "Login";
+  document.title = to.meta.title || defaultTitle;
   const token = localStorage.getItem("token");
 
   if (to.meta.requiresAuth && !token) {
@@ -39,7 +43,7 @@ router.beforeEach((to, from, next) => {
     next("/login");
   } else if (to.path === "/login" && token) {
     // Se está logado e tenta ir pro login, manda pra home
-    next("/dashboard");
+    next("/");
   } else {
     // Tudo certo, segue
     next();

@@ -33,8 +33,8 @@
         variant="text"
         @click.stop="drawer = !drawer"
       ></v-app-bar-nav-icon>
-      <v-toolbar-title v-if="paginationData"
-        >Olá, {{ paginationData.data[0]?.name }}</v-toolbar-title
+      <v-toolbar-title v-if="loggedUser"
+        >Olá, {{ loggedUser.name }}</v-toolbar-title
       >
     </v-app-bar>
 
@@ -42,8 +42,8 @@
       <v-container>
         <v-row justify="center">
           <v-col cols="12">
-            <h2 class="mb-4" style="margin-left: 110px">Usuários</h2>
-            <v-card flat class="border mb-4" style="width: 81%; margin: auto">
+            <h2 class="mb-4" style="margin-left: 78px">Usuários</h2>
+            <v-card flat class="border mb-4" style="width: 87%; margin: auto">
               <div class="d-flex justify-space-between">
                 <v-card-title>
                   <v-btn
@@ -68,11 +68,11 @@
               <v-table>
                 <thead class="bg-grey-lighten-4">
                   <tr>
-                    <th style="width: 13%">Data de Cadastro</th>
-                    <th style="width: 13%">Nome</th>
-                    <th style="width: 13%">CPF</th>
-                    <th style="width: 13%">E-mail</th>
-                    <th>Perfil</th>
+                    <th style="width: 11%">Data de Cadastro</th>
+                    <th style="width: 9%">Nome</th>
+                    <th style="width: 16%">CPF</th>
+                    <th style="width: 1%">E-mail</th>
+                    <th style="width: 5%">Perfil</th>
                     <th class="ml-5">Ações</th>
                   </tr>
                 </thead>
@@ -82,7 +82,7 @@
                       {{ new Date(item.created_at).toLocaleDateString() }}
                     </td>
                     <td>{{ item.name }}</td>
-                    <td>{{ item.cpf }}</td>
+                    <td>{{ formatCPF(item.cpf) }}</td>
                     <td>{{ item.email }}</td>
                     <td>{{ item.profile?.name ?? "-" }}</td>
                     <td>
@@ -118,6 +118,7 @@
               <v-pagination
                 v-model="page"
                 :length="paginationLength"
+                :total-visible="5"
                 next-icon="mdi-menu-right"
                 prev-icon="mdi-menu-left"
               ></v-pagination>
@@ -164,6 +165,7 @@ export default {
       dialogDeleteUser: false,
       dialogDetailUser: false,
       dialogFilterUsers: false,
+      loggedUser: null,
       page: 1,
       formValid: false,
       selectedUser: null,
@@ -174,27 +176,11 @@ export default {
         per_page: 5,
       },
       userProfiles: [
-        { text: "ADM", value: "admin" },
-        { text: "USER", value: "user" },
+        { text: "ADM", value: 2 },
+        { text: "USER", value: 3 },
       ],
       activeItem: false,
     };
-  },
-  computed: {
-    paginatedUsers() {
-      return this.paginationData.data;
-    },
-    paginationLength() {
-      return this.paginationData.last_page;
-    },
-  },
-  watch: {
-    page() {
-      this.fetchUsers();
-    },
-  },
-  mounted() {
-    this.fetchUsers();
   },
   methods: {
     filter() {
@@ -206,7 +192,6 @@ export default {
           `http://localhost:8000/api/user?page=${this.page}&per_page=${this.paginationData.per_page}`,
           {
             headers: {
-              "Content-Type": "application/json",
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
@@ -217,10 +202,22 @@ export default {
           console.log(this.paginationData);
         })
         .catch((error) => {
-          if (err.response && err.response.status === 401) {
+          if (error.response && error.response.status === 401) {
             // Token inválido ou expirado
             this.$router.push("/login");
           }
+        });
+    },
+    fetchLoggedUser() {
+      axios
+        .get("http://localhost:8000/api/me", {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        .then((response) => {
+          this.loggedUser = response.data;
         });
     },
     openEditUserDialog(user) {
@@ -243,6 +240,28 @@ export default {
       localStorage.removeItem("token");
       this.$router.push("/login");
     },
+    formatCPF(cpf) {
+      if (!cpf) return "";
+      const cleaned = cpf.replace(/\D/g, "");
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    },
+  },
+  computed: {
+    paginatedUsers() {
+      return this.paginationData.data;
+    },
+    paginationLength() {
+      return this.paginationData.last_page;
+    },
+  },
+  watch: {
+    page() {
+      this.fetchUsers();
+    },
+  },
+  mounted() {
+    this.fetchUsers();
+    this.fetchLoggedUser();
   },
 };
 </script>
