@@ -250,7 +250,7 @@ export default {
           id: this.userToEdit.id || null,
           name: this.userToEdit.name || "",
           email: this.userToEdit.email || "",
-          cpf: this.userToEdit.cpf || "",
+          cpf: this.formatLoadedCPF(this.userToEdit.cpf) || "",
           profile_id: this.userToEdit.profile_id || "",
           password: "",
           password_confirmation: "",
@@ -281,6 +281,13 @@ export default {
               ];
       }
     },
+    formatLoadedCPF(cpf) {
+      let v = cpf.replace(/\D/g, "");
+      v = v.replace(/(\d{3})(\d)/, "$1.$2");
+      v = v.replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+      v = v.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+      return v;
+    },
     formatLoadedCEP(cep) {
       const cleaned = cep.replace(/\D/g, "");
       return cleaned.length > 5
@@ -296,8 +303,43 @@ export default {
     },
     formatCEP(index) {
       let cep = this.addresses[index].cep.replace(/\D/g, "");
-      this.addresses[index].cep =
-        cep.length > 5 ? cep.slice(0, 5) + "-" + cep.slice(5, 8) : cep;
+      if (cep.length > 5) {
+        cep = cep.slice(0, 5) + "-" + cep.slice(5, 8);
+      }
+      this.addresses[index].cep = cep;
+
+      // Requisição para a API (busca no banco Laravel)
+      const cleanCep = cep.replace(/\D/g, "");
+      if (cleanCep.length === 8) {
+        axios
+          .get(`http://localhost:8000/api/address/cep/${cleanCep}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          })
+          .then((response) => {
+            const data = response.data;
+            this.addresses[index] = {
+              public_place: data.public_place || "",
+              neighborhood: data.neighborhood || "",
+              city: data.city || "",
+              state: data.state || "",
+              number: data.number || "",
+              cep: data.cep || "",
+              complement: data.complement || "",
+            };
+          })
+          .catch((error) => {
+            console.log("CEP não encontrado:", error);
+            // Opcional: limpar os campos se o CEP não for encontrado
+            this.addresses[index].public_place = "";
+            this.addresses[index].neighborhood = "";
+            this.addresses[index].city = "";
+            this.addresses[index].state = "";
+            this.addresses[index].number = "";
+            this.addresses[index].complement = "";
+          });
+      }
     },
     addAddress() {
       this.addresses.push({
@@ -338,6 +380,7 @@ export default {
 
         const payload = {
           ...this.user,
+          cpf: this.user.cpf.replace(/\D/g, ""),
           addresses: this.addresses.map((addr) => ({
             ...addr,
             id: addr.id,
