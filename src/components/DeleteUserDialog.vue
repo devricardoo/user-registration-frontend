@@ -18,6 +18,8 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   props: {
     modelValue: Boolean,
@@ -36,7 +38,20 @@ export default {
   },
   methods: {
     confirmDelete() {
-      this.$emit("confirm-delete", this.user.id);
+      axios
+        .delete(`http://localhost:8000/api/user/${this.user.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        .then((response) => {
+          this.$emit("confirm-delete", response.data);
+        })
+        .catch((error) => {
+          if (error.response && error.response.data) {
+            console.log(error.response.data);
+          }
+        });
       this.dialog = false;
     },
   },
