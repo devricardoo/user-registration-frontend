@@ -34,7 +34,7 @@
         @click.stop="drawer = !drawer"
       ></v-app-bar-nav-icon>
       <v-toolbar-title v-if="loggedUser"
-        >Olá, {{ loggedUser.name }}</v-toolbar-title
+        >Olá, {{ loggedUser.name }}!</v-toolbar-title
       >
     </v-app-bar>
 
@@ -53,9 +53,19 @@
                     @click="dialogFilterUsers = true"
                     >Filtrar</v-btn
                   >
+
+                  <v-btn
+                    v-if="isFiltered"
+                    variant="text"
+                    icon="mdi-close-circle"
+                    @click="clearFilters"
+                    class="ml-2"
+                    color="red"
+                  ></v-btn>
                 </v-card-title>
                 <v-card-title>
                   <v-btn
+                    v-if="isAdmin()"
                     variant="tonal"
                     size="small"
                     @click="dialogAddUser = true"
@@ -65,7 +75,7 @@
                   </v-btn>
                 </v-card-title>
               </div>
-              <v-table>
+              <v-table v-if="loggedUser">
                 <thead class="bg-grey-lighten-4">
                   <tr>
                     <th style="width: 11%">Data de Cadastro</th>
@@ -77,7 +87,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(item, index) in paginationData.data" :key="index">
+                  <tr v-for="(item, index) in filteredUsers" :key="index">
                     <td>
                       {{ new Date(item.created_at).toLocaleDateString() }}
                     </td>
@@ -89,10 +99,11 @@
                       <v-btn
                         color="primary"
                         size="small"
-                        @click="dialogDetailUser = true"
+                        @click="openDetailUserDialog(item)"
                         >Detalhar</v-btn
                       >
                       <v-btn
+                        v-if="isAdmin()"
                         color="primary"
                         size="small"
                         class="ml-2"
@@ -101,6 +112,7 @@
                         Editar
                       </v-btn>
                       <v-btn
+                        v-if="isAdmin()"
                         color="error"
                         size="small"
                         class="ml-2"
@@ -135,9 +147,13 @@
         @update-user="handleUpdateUser"
       />
 
-      <DeleteUserDialog v-model="dialogDeleteUser" :user="selectedUser" />
-      <DetailUserModal v-model="dialogDetailUser" />
-      <FilterUsers v-model="dialogFilterUsers" />
+      <DeleteUserDialog
+        v-model="dialogDeleteUser"
+        :user="selectedUser"
+        @confirm-delete="handleDeleteUser"
+      />
+      <DetailUserModal v-model="dialogDetailUser" :user="selectedUser" />
+      <FilterUsers v-model="dialogFilterUsers" @search="handleFilteredUsers" />
     </v-main>
   </v-app>
 </template>
@@ -167,6 +183,7 @@ export default {
       dialogDetailUser: false,
       dialogFilterUsers: false,
       loggedUser: null,
+      isFiltered: false,
       page: 1,
       formValid: false,
       selectedUser: null,
@@ -184,8 +201,21 @@ export default {
     };
   },
   methods: {
-    filter() {
-      console.log("O que deseja filtrar?");
+    handleFilteredUsers(filteredUsers) {
+      // Atualiza a tabela com os dados filtrados
+      this.paginationData = {
+        ...this.paginationData,
+        data: filteredUsers, // Atualiza os dados filtrados
+        current_page: 1, // Resetando para a primeira página
+        last_page: Math.ceil(
+          filteredUsers.length / this.paginationData.per_page,
+        ), // Atualiza a quantidade de páginas
+      };
+      this.isFiltered = true;
+    },
+    clearFilters() {
+      this.isFiltered = false;
+      this.fetchUsers();
     },
     fetchUsers() {
       axios
@@ -219,6 +249,7 @@ export default {
         })
         .then((response) => {
           this.loggedUser = response.data;
+          console.log(this.loggedUser);
         });
     },
     openEditUserDialog(user) {
@@ -229,6 +260,10 @@ export default {
       this.selectedUser = { ...user };
       this.dialogDeleteUser = true;
     },
+    openDetailUserDialog(item) {
+      this.selectedUser = { ...item };
+      this.dialogDetailUser = true;
+    },
     handleUpdateUser(updatedUser) {
       const index = this.paginationData.data.findIndex(
         (user) => user.id === updatedUser.id,
@@ -236,6 +271,9 @@ export default {
       if (index !== -1) {
         this.paginationData.data.splice(index, 1, updatedUser);
       }
+    },
+    handleDeleteUser() {
+      this.fetchUsers();
     },
     handleLogout() {
       localStorage.removeItem("token");
@@ -246,8 +284,29 @@ export default {
       const cleaned = cpf.replace(/\D/g, "");
       return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     },
+    isAdmin() {
+      return (
+        this.loggedUser &&
+        this.loggedUser.profile &&
+        this.loggedUser.profile.name === "ADM"
+      );
+    },
+    isUser() {
+      return (
+        this.loggedUser &&
+        this.loggedUser.profile &&
+        this.loggedUser.profile.name === "USER"
+      );
+    },
   },
+
   computed: {
+    filteredUsers() {
+      if (!this.loggedUser) return this.paginationData.data;
+      return this.paginationData.data.filter(
+        (user) => user.id !== this.loggedUser.id,
+      );
+    },
     paginatedUsers() {
       return this.paginationData.data;
     },
