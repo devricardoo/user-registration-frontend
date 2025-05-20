@@ -115,7 +115,7 @@
                 <v-col cols="12" md="6">
                   <v-text-field
                     class="custom-input"
-                    label="Rua *"
+                    label="Logradouro *"
                     v-model="address.public_place"
                     :rules="[rules.required]"
                   />
@@ -272,6 +272,9 @@ export default {
           })
           .catch((error) => {
             this.loading = false;
+            if (error.response && error.response.data) {
+              console.log(error.response.data);
+            }
           });
       }
     },
@@ -314,6 +317,39 @@ export default {
         cep = cep.slice(0, 5) + "-" + cep.slice(5, 8);
       }
       this.addresses[index].cep = cep;
+
+      // Requisição para a API (busca no banco Laravel)
+      const cleanCep = cep.replace(/\D/g, "");
+      if (cleanCep.length === 8) {
+        axios
+          .get(`http://localhost:8000/api/address/cep/${cleanCep}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          })
+          .then((response) => {
+            const data = response.data;
+            this.addresses[index] = {
+              public_place: data.public_place || "",
+              neighborhood: data.neighborhood || "",
+              city: data.city || "",
+              state: data.state || "",
+              number: data.number || "",
+              cep: data.cep || "",
+              complement: data.complement || "",
+            };
+          })
+          .catch((error) => {
+            console.log("CEP não encontrado:", error);
+            // Opcional: limpar os campos se o CEP não for encontrado
+            this.addresses[index].public_place = "";
+            this.addresses[index].neighborhood = "";
+            this.addresses[index].city = "";
+            this.addresses[index].state = "";
+            this.addresses[index].number = "";
+            this.addresses[index].complement = "";
+          });
+      }
     },
     //Address helpers
     addAddress() {
