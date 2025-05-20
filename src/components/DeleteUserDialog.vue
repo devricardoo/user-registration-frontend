@@ -9,7 +9,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="dialog = false">Cancelar</v-btn>
+          <v-btn text @click="closeDialog">Cancelar</v-btn>
           <v-btn color="error" @click="confirmDelete">Excluir</v-btn>
         </v-card-actions>
       </v-card>
@@ -37,22 +37,27 @@ export default {
     },
   },
   methods: {
-    confirmDelete() {
-      axios
-        .delete(`http://localhost:8000/api/user/${this.user.id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        .then((response) => {
-          this.$emit("confirm-delete", response.data);
-        })
-        .catch((error) => {
-          if (error.response && error.response.data) {
-            console.log(error.response.data);
-          }
-        });
+    closeDialog() {
       this.dialog = false;
+    },
+    async confirmDelete() {
+      try {
+        const response = await axios.delete(
+          `http://localhost:8000/api/user/${this.user.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          },
+        );
+        this.$emit("confirm-delete", response.data);
+      } catch (error) {
+        if (error.response?.data) {
+          console.error("Erro ao excluir usuário:", error.response.data);
+        }
+      } finally {
+        this.closeDialog();
+      }
     },
   },
 };
