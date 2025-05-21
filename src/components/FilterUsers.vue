@@ -55,11 +55,15 @@
         >
       </v-card-actions>
     </v-card>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+    </v-snackbar>
   </v-dialog>
 </template>
 
 <script>
-import axios from "axios";
+import api from "@/services/api";
 
 export default {
   name: "FilterUsers",
@@ -69,6 +73,14 @@ export default {
   },
   data() {
     return {
+      formValid: false,
+      loading: false,
+      snackbar: {
+        show: false,
+        text: "",
+        color: "info",
+      },
+
       user: {
         name: "",
         cpf: "",
@@ -76,46 +88,50 @@ export default {
         startDate: "",
         endDate: "",
       },
-      loading: false,
-      formValid: false,
     };
   },
   methods: {
+    showSnackbar(text, color = "info") {
+      this.snackbar.text = text;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
+    },
     searchUser() {
       this.loading = true;
       const { name, cpf, startDate, endDate } = this.user;
-      const txt = [name, cpf, startDate, endDate].filter(Boolean).join(" ");
+      const hasFields = [name, cpf, startDate, endDate].some(Boolean);
 
-      if (!txt) {
-        alert("Preencha ao menos um campo para realizar a pesquisa");
+      if (!hasFields) {
+        this.showSnackbar(
+          "Preencha ao menos um campo para realizar a pesquisa",
+          "red",
+        );
+        this.loading = false;
         return;
       }
 
-      axios
+      api
         .get("http://localhost:8000/api/search", {
           params: {
             name: name || undefined,
-            cpf: this.user.cpf.replace(/\D/g, "") || undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-          },
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            cpf: cpf.replace(/\D/g, "") || undefined,
+            startDate,
+            endDate,
           },
         })
         .then((response) => {
           const users = response.data.data;
-          if (users.length === 0) {
-            alert("Nenhum usuário encontrado.");
+          if (!users.length) {
+            this.showSnackbar("Nenhum usuário encontrado.", "info");
           } else {
-            this.loading = false;
             this.$emit("search", users);
-            console.log("Usuários encontrados:", users);
             this.$emit("update:modelValue", false);
           }
         })
         .catch((error) => {
+          console.error(error);
+        })
+        .finally(() => {
           this.loading = false;
         });
     },
