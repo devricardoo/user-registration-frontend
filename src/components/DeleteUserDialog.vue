@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from "@/services/api";
 
 export default {
   props: {
@@ -37,18 +37,10 @@ export default {
     },
   },
   methods: {
-    closeDialog() {
-      this.dialog = false;
-    },
     async confirmDelete() {
       try {
-        const response = await axios.delete(
+        const response = await api.delete(
           `http://localhost:8000/api/user/${this.user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          },
         );
         this.$emit("confirm-delete", response.data);
       } catch (error) {
@@ -58,6 +50,9 @@ export default {
       } finally {
         this.closeDialog();
       }
+    },
+    closeDialog() {
+      this.dialog = false;
     },
   },
 };
