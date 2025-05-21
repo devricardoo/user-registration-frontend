@@ -8,3 +8,22 @@ Este é o front-end de um sistema de cadastro de usuários. Ele foi desenvolvido
 - **Edição de dados**: Os usuários que tem a permissão de ADM podem editar as informações do registro.
 - **Detalhes de informações**: Usuários como ADM e USERS podem visualizar os dados que estão armazenados no sistema.
 - **Exlusão de informações**: Usuários com a permissão de ADM podem exlcuir os dados que estão armazenados no sistema.
+
+## Tecnologias Utilizadas
+
+- **Vue 3**: Framework JavaScript para construção da interface de usuário.
+- **Vuetify**: Framework de UI baseado em Material Design, usado para criar a interface responsiva e interativa.
+- **Axios**: Biblioteca para realizar requisições HTTP para o back-end.
+- **Vue Router**: Para navegação entre páginas da aplicação.
+- **Vuex** (se for o caso): Para gerenciar o estado global da aplicação, se necessário.
+
+## Instalação
+
+### 1. Clone o Repositório
+
+Clone o repositório para o seu ambiente local:
+
+```bash
+git clone https://github.com/devricardoo/user-registration-frontend.git
+cd user-registration-frontend
+```
