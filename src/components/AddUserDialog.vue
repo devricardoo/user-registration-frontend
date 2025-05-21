@@ -29,10 +29,17 @@
               <v-text-field
                 label="Digite seu CPF"
                 v-model="user.cpf"
-                @input="formatCPF"
+                @input="
+                  () => {
+                    formatCPF();
+                    cpfError = '';
+                  }
+                "
                 maxlength="14"
                 required
                 :rules="[(v) => !!v || 'CPF é obrigatório']"
+                :error="!!cpfError"
+                :error-messages="cpfError"
               />
             </v-col>
 
@@ -58,7 +65,7 @@
                 v-model="user.email"
                 type="email"
                 required
-                :rules="[rules.email]"
+                :rules="[rules.email, rules.required]"
               />
             </v-col>
 
@@ -115,6 +122,15 @@
                 <v-col cols="12" md="6">
                   <v-text-field
                     class="custom-input"
+                    label="CEP *"
+                    v-model="address.cep"
+                    @input="formatCEP(index)"
+                    :rules="[rules.required]"
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    class="custom-input"
                     label="Logradouro *"
                     v-model="address.public_place"
                     :rules="[rules.required]"
@@ -155,15 +171,6 @@
                 <v-col cols="12" md="6">
                   <v-text-field
                     class="custom-input"
-                    label="CEP *"
-                    v-model="address.cep"
-                    @input="formatCEP(index)"
-                    :rules="[rules.required]"
-                  />
-                </v-col>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    class="custom-input"
                     label="Complemento"
                     v-model="address.complement"
                   />
@@ -197,7 +204,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from "@/services/api";
 
 export default {
   name: "AddUserDialog",
@@ -207,6 +214,22 @@ export default {
   },
   data() {
     return {
+      cpfError: "",
+      formValid: false,
+      loading: false,
+      passwordVisible: false,
+      passwordVisibleCF: false,
+      addresses: [
+        {
+          public_place: "",
+          cep: "",
+          number: "",
+          neighborhood: "",
+          city: "",
+          state: "",
+          complement: "",
+        },
+      ],
       rules: {
         required: (v) => !!v || "Campo obrigatório",
         email: (v) => /.+@.+\..+/.test(v) || "E-mail inválido",
@@ -223,21 +246,6 @@ export default {
         password: "",
         password_confirmation: "",
       },
-      addresses: [
-        {
-          public_place: "",
-          cep: "",
-          number: "",
-          neighborhood: "",
-          city: "",
-          state: "",
-          complement: "",
-        },
-      ],
-      formValid: false,
-      loading: false,
-      passwordVisible: false,
-      passwordVisibleCF: false,
     };
   },
   methods: {
@@ -258,22 +266,27 @@ export default {
         this.loading = true;
 
         const payload = this.getUserPayload();
-        axios
-          .post("http://localhost:8000/api/user", payload, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          })
+        api
+          .post("http://localhost:8000/api/user", payload)
           .then((response) => {
             this.loading = false;
             this.resetForm();
-            this.$emit("update:modelValue", false);
             this.$emit("userAdded", response.data);
+            this.$emit("update:modelValue", false);
           })
           .catch((error) => {
             this.loading = false;
             if (error.response && error.response.data) {
-              console.log(error.response.data);
+              const responseData = error.response.data;
+
+              if (responseData.errors && responseData.errors.cpf) {
+                this.cpfError = responseData.errors.cpf[0];
+              } else if (typeof responseData.message === "string") {
+                if (responseData.message.toLowerCase().includes("cpf")) {
+                  this.cpfError = responseData.message;
+                }
+              }
+              console.log("Erro ao cadastrar:", responseData);
             }
           });
       }
@@ -300,9 +313,8 @@ export default {
         },
       ];
 
-      if (this.$refs.form) this.$refs.form.resetValidation();
+      //if (this.$refs.form) this.$refs.form.resetValidation();
     },
-    // Format helpers
     formatCPF() {
       let v = this.user.cpf.replace(/\D/g, "");
       v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -310,23 +322,16 @@ export default {
       v = v.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
       this.user.cpf = v;
     },
-
     formatCEP(index) {
       let cep = this.addresses[index].cep.replace(/\D/g, "");
       if (cep.length > 5) {
         cep = cep.slice(0, 5) + "-" + cep.slice(5, 8);
       }
       this.addresses[index].cep = cep;
-
-      // Requisição para a API (busca no banco Laravel)
       const cleanCep = cep.replace(/\D/g, "");
       if (cleanCep.length === 8) {
-        axios
-          .get(`http://localhost:8000/api/address/cep/${cleanCep}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          })
+        api
+          .get(`http://localhost:8000/api/address/cep/${cleanCep}`)
           .then((response) => {
             const data = response.data;
             this.addresses[index] = {
@@ -341,7 +346,7 @@ export default {
           })
           .catch((error) => {
             console.log("CEP não encontrado:", error);
-            // Opcional: limpar os campos se o CEP não for encontrado
+            // clear
             this.addresses[index].public_place = "";
             this.addresses[index].neighborhood = "";
             this.addresses[index].city = "";
