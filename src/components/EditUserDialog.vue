@@ -240,10 +240,7 @@ export default {
   },
   methods: {
     handleUpdateUser(updatedUser) {
-      // Atualiza o usuário selecionado para refletir mudanças no perfil e outros dados
       this.selectedUser = { ...updatedUser };
-
-      // Se você mantiver uma lista de usuários, atualize ela também para manter tudo sincronizado
       const idx = this.users.findIndex((u) => u.id === updatedUser.id);
       if (idx !== -1) {
         this.users.splice(idx, 1, updatedUser);
@@ -319,7 +316,6 @@ export default {
       }
       this.addresses[index].cep = cep;
 
-      // Requisição para a API (busca no banco Laravel)
       const cleanCep = cep.replace(/\D/g, "");
       if (cleanCep.length === 8) {
         api
