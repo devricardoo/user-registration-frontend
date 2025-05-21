@@ -15,7 +15,7 @@
             Informações do Usuário
           </h3>
           <v-row dense>
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="6">
               <v-text-field
                 label="Nome"
                 v-model="user.name"
@@ -25,7 +25,7 @@
               />
             </v-col>
 
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="6">
               <v-text-field
                 label="Digite seu CPF"
                 v-model="user.cpf"
@@ -36,7 +36,7 @@
               />
             </v-col>
 
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="6">
               <v-autocomplete
                 v-model="user.profile_id"
                 :items="profiles"
@@ -48,7 +48,7 @@
               />
             </v-col>
 
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="6">
               <v-text-field
                 label="E-mail"
                 v-model="user.email"
@@ -58,7 +58,17 @@
               />
             </v-col>
 
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="12">
+              <v-btn
+                class="mb-4"
+                color="primary"
+                @click="showPasswordFields = !showPasswordFields"
+              >
+                {{ showPasswordFields ? "Fechar" : "Alterar Senha" }}
+              </v-btn>
+            </v-col>
+
+            <v-col v-if="showPasswordFields" cols="12" md="6">
               <v-text-field
                 label="Senha"
                 v-model="user.password"
@@ -73,7 +83,7 @@
               </v-text-field>
             </v-col>
 
-            <v-col cols="12" md="4">
+            <v-col v-if="showPasswordFields" cols="12" md="6">
               <v-text-field
                 label="Confirme a Senha"
                 v-model="user.password_confirmation"
@@ -170,7 +180,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from "@/services/api";
 import { id } from "vuetify/locale";
 
 export default {
@@ -185,15 +195,7 @@ export default {
       loading: false,
       passwordVisible: false,
       passwordVisibleCF: false,
-      user: {
-        id: null,
-        name: "",
-        email: "",
-        cpf: "",
-        profile_id: "",
-        password: "",
-        password_confirmation: "",
-      },
+      showPasswordFields: false,
       addresses: [
         {
           public_place: "",
@@ -205,6 +207,15 @@ export default {
           complement: "",
         },
       ],
+      user: {
+        id: null,
+        name: "",
+        email: "",
+        cpf: "",
+        profile_id: "",
+        password: "",
+        password_confirmation: "",
+      },
       rules: {
         required: (v) => !!v || "Campo obrigatório",
         email: (v) => /.+@.+\..+/.test(v) || "E-mail inválido",
@@ -311,12 +322,8 @@ export default {
       // Requisição para a API (busca no banco Laravel)
       const cleanCep = cep.replace(/\D/g, "");
       if (cleanCep.length === 8) {
-        axios
-          .get(`http://localhost:8000/api/address/cep/${cleanCep}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          })
+        api
+          .get(`http://localhost:8000/api/address/cep/${cleanCep}`)
           .then((response) => {
             const data = response.data;
             this.addresses[index] = {
@@ -393,12 +400,8 @@ export default {
           delete payload.password_confirmation;
         }
 
-        axios
-          .patch(`http://localhost:8000/api/user/${this.user.id}`, payload, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          })
+        api
+          .patch(`http://localhost:8000/api/user/${this.user.id}`, payload)
           .then((response) => {
             this.$emit("update-user", response.data);
             console.log(response.data);
