@@ -6,7 +6,14 @@
           prepend-icon="mdi-home"
           title="Início"
           value="inicio"
-          :active="activeItem === !activeItem"
+        ></v-list-item>
+
+        <v-list-item
+          v-if="isAdmin()"
+          prepend-icon="mdi-map-marker"
+          to="/addresses"
+          title="Endereços"
+          value="enderecos"
         ></v-list-item>
 
         <v-list-group value="Perfil">
@@ -42,7 +49,7 @@
       <v-container>
         <v-row justify="center">
           <v-col cols="12">
-            <h2 class="mb-4" style="margin-left: 78px">Usuários</h2>
+            <h2 class="mb-4" style="margin-left: 73px">Usuários</h2>
             <v-card flat class="border mb-4" style="width: 87%; margin: auto">
               <div class="d-flex justify-space-between">
                 <v-card-title>
@@ -139,7 +146,11 @@
         </v-row>
       </v-container>
 
-      <AddUserDialog v-model="dialogAddUser" :profiles="userProfiles" />
+      <AddUserDialog
+        v-model="dialogAddUser"
+        :profiles="userProfiles"
+        @user-added="fetchUsers"
+      />
       <EditUserDialog
         v-model="dialogEditUser"
         :profiles="userProfiles"
@@ -159,7 +170,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from "@/services/api";
 import AddUserDialog from "@/components/AddUserDialog.vue";
 import EditUserDialog from "@/components/EditUserDialog.vue";
 import DeleteUserDialog from "@/components/DeleteUserDialog.vue";
@@ -169,47 +180,69 @@ import DetailUserModal from "@/components/DetailUserModal.vue";
 export default {
   components: {
     AddUserDialog,
-    EditUserDialog,
     DeleteUserDialog,
-    FilterUsers,
     DetailUserModal,
+    EditUserDialog,
+    FilterUsers,
   },
   data() {
     return {
-      drawer: false,
+      activeItem: false,
       dialogAddUser: false,
       dialogEditUser: false,
       dialogDeleteUser: false,
       dialogDetailUser: false,
       dialogFilterUsers: false,
-      loggedUser: null,
-      isFiltered: false,
-      page: 1,
+      drawer: false,
       formValid: false,
-      selectedUser: null,
+      isFiltered: false,
+      loggedUser: null,
+      page: 1,
       paginationData: {
         data: [],
         current_page: 1,
         last_page: 1,
         per_page: 5,
       },
+      selectedUser: null,
       userProfiles: [
         { text: "ADM", value: 2 },
         { text: "USER", value: 3 },
       ],
-      activeItem: false,
     };
   },
   methods: {
+    fetchLoggedUser() {
+      api.get("http://localhost:8000/api/me").then((response) => {
+        this.loggedUser = response.data;
+      });
+    },
+    handleLogout() {
+      localStorage.removeItem("token");
+      this.$router.push("/login");
+    },
+
+    fetchUsers() {
+      api
+        .get(
+          `http://localhost:8000/api/user?page=${this.page}&per_page=${this.paginationData.per_page}`,
+        )
+        .then((response) => {
+          this.paginationData = response.data;
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar usuários:", error);
+        });
+    },
+
     handleFilteredUsers(filteredUsers) {
-      // Atualiza a tabela com os dados filtrados
       this.paginationData = {
         ...this.paginationData,
-        data: filteredUsers, // Atualiza os dados filtrados
-        current_page: 1, // Resetando para a primeira página
+        data: filteredUsers,
+        current_page: 1,
         last_page: Math.ceil(
           filteredUsers.length / this.paginationData.per_page,
-        ), // Atualiza a quantidade de páginas
+        ),
       };
       this.isFiltered = true;
     },
@@ -217,41 +250,19 @@ export default {
       this.isFiltered = false;
       this.fetchUsers();
     },
-    fetchUsers() {
-      axios
-        .get(
-          `http://localhost:8000/api/user?page=${this.page}&per_page=${this.paginationData.per_page}`,
-          {
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          },
-        )
-        .then((response) => {
-          this.paginationData = response.data;
-          console.log(this.paginationData);
-        })
-        .catch((error) => {
-          if (error.response && error.response.status === 401) {
-            // Token inválido ou expirado
-            this.$router.push("/login");
-          }
-        });
+
+    handleDeleteUser() {
+      this.fetchUsers();
     },
-    fetchLoggedUser() {
-      axios
-        .get("http://localhost:8000/api/me", {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        .then((response) => {
-          this.loggedUser = response.data;
-          console.log(this.loggedUser);
-        });
+    handleUpdateUser(updatedUser) {
+      const index = this.paginationData.data.findIndex(
+        (user) => user.id === updatedUser.id,
+      );
+      if (index !== -1) {
+        this.paginationData.data.splice(index, 1, updatedUser);
+      }
     },
+
     openEditUserDialog(user) {
       this.selectedUser = { ...user };
       this.dialogEditUser = true;
@@ -264,21 +275,7 @@ export default {
       this.selectedUser = { ...item };
       this.dialogDetailUser = true;
     },
-    handleUpdateUser(updatedUser) {
-      const index = this.paginationData.data.findIndex(
-        (user) => user.id === updatedUser.id,
-      );
-      if (index !== -1) {
-        this.paginationData.data.splice(index, 1, updatedUser);
-      }
-    },
-    handleDeleteUser() {
-      this.fetchUsers();
-    },
-    handleLogout() {
-      localStorage.removeItem("token");
-      this.$router.push("/login");
-    },
+
     formatCPF(cpf) {
       if (!cpf) return "";
       const cleaned = cpf.replace(/\D/g, "");
@@ -299,7 +296,6 @@ export default {
       );
     },
   },
-
   computed: {
     filteredUsers() {
       if (!this.loggedUser) return this.paginationData.data;
