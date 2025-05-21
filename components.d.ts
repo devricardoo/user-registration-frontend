@@ -8,8 +8,11 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Addr: typeof import('./src/components/addresses.vue')['default']
+    Addresses: typeof import('./src/components/addresses/addresses.vue')['default']
     AddUserDialog: typeof import('./src/components/AddUserDialog.vue')['default']
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
+    DeleteAdressesDialog: typeof import('./src/components/addresses/deleteAdressesDialog.vue')['default']
     DeleteUserDialog: typeof import('./src/components/DeleteUserDialog.vue')['default']
     DetailUser: typeof import('./src/components/DetailUser.vue')['default']
     DetailUserModal: typeof import('./src/components/DetailUserModal.vue')['default']
