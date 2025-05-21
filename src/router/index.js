@@ -8,8 +8,18 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/pages/Home.vue";
 import login from "@/components/autenticate/login.vue";
-//import { meta } from "eslint-plugin-vue";
-//import DetailUser from "@/components/DetailUser.vue";
+import addresses from "@/components/addresses/addresses.vue";
+
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const exp = payload.exp;
+    const now = Math.floor(Date.now() / 1000);
+    return exp < now;
+  } catch (e) {
+    return true;
+  }
+}
 
 const routes = [
   {
@@ -22,10 +32,11 @@ const routes = [
     component: login,
     meta: { title: "Login" },
   },
-  /*{
-    path: "/detalhes",
-    component: DetailUser,
-  },*/
+  {
+    path: "/addresses",
+    component: addresses,
+    meta: { title: "Endereços" },
+  },
 ];
 
 const router = createRouter({
@@ -36,16 +47,19 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const defaultTitle = "Login";
   document.title = to.meta.title || defaultTitle;
+
   const token = localStorage.getItem("token");
 
-  if (to.meta.requiresAuth && !token) {
-    // Se a rota precisa de autenticação e o usuário não tem token, redireciona
-    next("/login");
-  } else if (to.path === "/login" && token) {
-    // Se está logado e tenta ir pro login, manda pra home
+  if (to.meta.requiresAuth) {
+    if (!token || isTokenExpired(token)) {
+      localStorage.removeItem("token"); // remove o token inválido
+      next("/login");
+    } else {
+      next();
+    }
+  } else if (to.path === "/login" && token && !isTokenExpired(token)) {
     next("/");
   } else {
-    // Tudo certo, segue
     next();
   }
 });
